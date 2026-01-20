@@ -3,6 +3,12 @@ paths:
   output_dir: "./output"
   temp_dir: "./temp"
 
+assets:
+  auto_generate: true
+  theme: "tecnologia e inovação"
+  pexels_api_key: "dasfgasd213safasa"
+  pexels_per_page: 6
+
 video:
   resolution: "1080p"
   fps: 30
