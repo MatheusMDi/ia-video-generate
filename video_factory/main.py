@@ -113,7 +113,11 @@ async def run() -> None:
     llm_engine = LLMEngine(**llm_settings)
 
     prompt = build_prompt(channel["name"], assets_settings.get("theme"))
-    script_text = llm_engine.generate_script(prompt)
+    try:
+        script_text = llm_engine.generate_script(prompt)
+    except RuntimeError as exc:
+        logging.error("[LLM] %s", exc)
+        return
 
     tts_provider = tts_factory(str(settings_path))
     voice_id = channel.get("voice_ids", {}).get(provider_name, "")
