@@ -5,7 +5,7 @@ import logging
 from typing import Any, Dict
 
 from decouple import config
-from openai import OpenAI
+from openai import APIConnectionError, APITimeoutError, OpenAI, RateLimitError
 
 
 class LLMEngine:
@@ -25,12 +25,21 @@ class LLMEngine:
     def generate_script(self, prompt: str) -> str:
         """Generate a script from a given prompt."""
         logging.info("[LLM] Generating script for prompt: %s", prompt)
-        response = self._client.chat.completions.create(
-            model=self._model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=self._max_tokens,
-            temperature=self._temperature,
-        )
+        try:
+            response = self._client.chat.completions.create(
+                model=self._model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=self._max_tokens,
+                temperature=self._temperature,
+            )
+        except RateLimitError as exc:
+            message = "OpenAI quota exceeded. Check your plan and billing details."
+            logging.error("[LLM] %s", message)
+            raise RuntimeError(message) from exc
+        except (APIConnectionError, APITimeoutError) as exc:
+            message = "OpenAI request failed due to a network timeout."
+            logging.error("[LLM] %s", message)
+            raise RuntimeError(message) from exc
         return response.choices[0].message.content.strip()
 
 
