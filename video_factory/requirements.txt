@@ -1,0 +1,11 @@
+edge-tts
+# ElevenLabs SDK for TTS
+# Pin to a compatible range if needed in production
+# Example: elevenlabs>=0.2.26
+# Keeping unpinned here for simplicity
+#
+elevenlabs
+moviepy
+openai
+python-decouple
+pyyaml

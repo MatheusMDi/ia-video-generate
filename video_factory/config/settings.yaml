@@ -1,0 +1,17 @@
+paths:
+  assets_dir: "./assets"
+  output_dir: "./output"
+  temp_dir: "./temp"
+
+video:
+  resolution: "1080p"
+  fps: 30
+  image_duration_seconds: 3
+
+llm:
+  max_tokens: 500
+  temperature: 0.7
+
+# Switch TTS provider by changing only this line: edge | elevenlabs
+# Example: tts_provider_active: "elevenlabs"
+tts_provider_active: "edge"

@@ -1,0 +1,10 @@
+[
+  {
+    "name": "Fatos_Curiosos_BR",
+    "language": "pt-br",
+    "voice_ids": {
+      "edge": "pt-BR-AntonioNeural",
+      "elevenlabs": "Jofre_Voice_ID_Hash"
+    }
+  }
+]
