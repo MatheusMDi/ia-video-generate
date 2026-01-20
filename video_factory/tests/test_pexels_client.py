@@ -35,3 +35,9 @@ class TestPexelsClient(TestCase):
             any("Download failed" in message for message in captured.output),
             "Expected warning log for failed download",
         )
+
+    def test_build_headers_includes_user_agent_and_auth(self) -> None:
+        headers = self.client._build_headers()
+        self.assertEqual(headers["Authorization"], "test-key")
+        self.assertIn("User-Agent", headers)
+        self.assertIn("Accept", headers)
