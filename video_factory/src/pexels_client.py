@@ -5,6 +5,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Dict, List
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -14,22 +15,47 @@ class PexelsClient:
 
     def __init__(self, api_key: str) -> None:
         """Initialize the client with a Pexels API key."""
-        self.api_key = api_key
+        self.api_key = api_key.strip()
+
+    def _build_headers(self) -> Dict[str, str]:
+        """Build headers for Pexels API requests."""
+        return {
+            "Authorization": self.api_key,
+            "User-Agent": "ia-video-generate/1.0 (+https://github.com/)",
+            "Accept": "application/json",
+        }
 
     def search_photos(self, query: str, per_page: int = 6, orientation: str = "landscape") -> List[Dict]:
         """Search for photos and return the raw photo entries."""
         params = urlencode({"query": query, "per_page": per_page, "orientation": orientation})
         url = f"https://api.pexels.com/v1/search?{params}"
-        request = Request(url, headers={"Authorization": self.api_key})
+        request = Request(url, headers=self._build_headers())
         logging.info("[PEXELS] Searching photos: query=%s per_page=%s", query, per_page)
-        with urlopen(request, timeout=30) as response:
-            payload = json.loads(response.read().decode("utf-8"))
+        try:
+            with urlopen(request, timeout=30) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except HTTPError as exc:
+            logging.warning("[PEXELS] Search failed (status=%s): %s", exc.code, exc)
+            return []
+        except URLError as exc:
+            logging.warning("[PEXELS] Search failed: %s", exc)
+            return []
+        except json.JSONDecodeError as exc:
+            logging.warning("[PEXELS] Invalid JSON response: %s", exc)
+            return []
         return payload.get("photos", [])
 
     def download_photo(self, url: str, destination: Path) -> None:
         """Download a photo to the destination path."""
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        request = Request(url, headers={"Authorization": self.api_key})
-        with urlopen(request, timeout=60) as response:
-            destination.write_bytes(response.read())
+        request = Request(url, headers=self._build_headers())
+        try:
+            with urlopen(request, timeout=60) as response:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(response.read())
+        except HTTPError as exc:
+            logging.warning("[PEXELS] Download failed (status=%s): %s", exc.code, exc)
+            return
+        except URLError as exc:
+            logging.warning("[PEXELS] Download failed: %s", exc)
+            return
         logging.info("[PEXELS] Downloaded %s", destination)
