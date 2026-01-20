@@ -11,6 +11,7 @@ import yaml
 
 from src.asset_manager import AssetManager
 from src.llm_engine import LLMEngine, build_llm_settings
+from src.pexels_client import PexelsClient
 from src.tts_engine import tts_factory
 from src.video_renderer import VideoRenderer
 
@@ -51,8 +52,10 @@ async def generate_audio(
         raise
 
 
-def build_prompt(channel_name: str) -> str:
+def build_prompt(channel_name: str, theme: str | None = None) -> str:
     """Build a default prompt for the LLM."""
+    if theme:
+        return f"Crie um roteiro curto e envolvente para o canal {channel_name} com foco em {theme}."
     return f"Crie um roteiro curto e envolvente para o canal {channel_name}."
 
 
@@ -81,7 +84,27 @@ async def run() -> None:
     )
     asset_manager.ensure_directories()
 
+    assets_settings = settings.get("assets", {})
     images = asset_manager.list_images()
+    if not images and assets_settings.get("auto_generate", False):
+        theme = assets_settings.get("theme")
+        api_key = assets_settings.get("pexels_api_key")
+        per_page = assets_settings.get("pexels_per_page", 6)
+        if theme and api_key:
+            client = PexelsClient(api_key=api_key)
+            photos = client.search_photos(query=theme, per_page=per_page)
+            for index, photo in enumerate(photos, start=1):
+                src = photo.get("src", {})
+                image_url = src.get("large") or src.get("original")
+                if not image_url:
+                    continue
+                filename = f"pexels_{index:02d}.jpg"
+                client.download_photo(image_url, asset_manager.assets_dir / filename)
+        else:
+            logging.warning("[ASSETS] Auto-generate enabled but theme or API key missing.")
+
+        images = asset_manager.list_images()
+
     if not images:
         logging.warning("[ASSETS] No images found. Add assets to proceed.")
         return
@@ -89,7 +112,7 @@ async def run() -> None:
     llm_settings = build_llm_settings(settings)
     llm_engine = LLMEngine(**llm_settings)
 
-    prompt = build_prompt(channel["name"])
+    prompt = build_prompt(channel["name"], assets_settings.get("theme"))
     script_text = llm_engine.generate_script(prompt)
 
     tts_provider = tts_factory(str(settings_path))
